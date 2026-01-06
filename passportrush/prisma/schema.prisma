@@ -1,0 +1,203 @@
+// PassportRush Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Auth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Main application models
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts     Account[]
+  sessions     Session[]
+  uploads      Upload[]
+  jobs         Job[]
+  orders       Order[]
+  entitlements Entitlement[]
+}
+
+model Upload {
+  id               String   @id @default(cuid())
+  userId           String?
+  originalFilename String
+  mimeType         String
+  fileSize         Int
+  s3Key            String
+  s3Bucket         String
+  uploadedAt       DateTime @default(now())
+  ipAddress        String?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  jobs Job[]
+
+  @@index([userId])
+  @@index([uploadedAt])
+}
+
+enum JobMode {
+  PRINT_MAIL
+  ONLINE_RENEWAL
+}
+
+enum BackgroundMode {
+  STRICT
+  ASSISTED
+}
+
+enum JobStatus {
+  QUEUED
+  PROCESSING
+  DONE
+  FAILED
+}
+
+model Job {
+  id             String         @id @default(cuid())
+  userId         String?
+  uploadId       String
+  mode           JobMode
+  backgroundMode BackgroundMode @default(STRICT)
+  status         JobStatus      @default(QUEUED)
+  failReason     String?
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  processedAt    DateTime?
+
+  user            User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  upload          Upload            @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  processedAssets ProcessedAsset[]
+  entitlements    Entitlement[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum AssetType {
+  PROOF_WATERMARKED
+  FINAL_2X2
+  FINAL_4UP
+  FINAL_ONLINE
+}
+
+model ProcessedAsset {
+  id        String    @id @default(cuid())
+  jobId     String
+  assetType AssetType
+  s3Key     String
+  s3Bucket  String
+  fileSize  Int?
+  mimeType  String
+  createdAt DateTime  @default(now())
+
+  job          Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  entitlements Entitlement[]
+
+  @@index([jobId])
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Order {
+  id                       String      @id @default(cuid())
+  userId                   String
+  stripeCheckoutSessionId  String      @unique
+  stripePaymentIntentId    String?     @unique
+  amount                   Int
+  currency                 String      @default("usd")
+  status                   OrderStatus @default(PENDING)
+  metadata                 Json?
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+  completedAt              DateTime?
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entitlements Entitlement[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([stripeCheckoutSessionId])
+}
+
+model Entitlement {
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  orderId   String
+  assetId   String?
+  createdAt DateTime @default(now())
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job   Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  order Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  asset ProcessedAsset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, jobId, orderId])
+  @@index([userId])
+  @@index([jobId])
+}
+
+// Rate limiting model
+model RateLimit {
+  id         String   @id @default(cuid())
+  identifier String
+  action     String
+  count      Int      @default(1)
+  windowStart DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@unique([identifier, action, windowStart])
+  @@index([identifier, action])
+}

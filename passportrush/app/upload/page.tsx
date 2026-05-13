@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { Suspense, useState, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Camera, Upload, AlertCircle, Check, X } from "lucide-react"
 
-export default function UploadPage() {
+function UploadContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const mode = searchParams.get("mode") as "PRINT_MAIL" | "ONLINE_RENEWAL" || "ONLINE_RENEWAL"
@@ -350,5 +350,13 @@ export default function UploadPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function UploadPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <UploadContent />
+    </Suspense>
   )
 }

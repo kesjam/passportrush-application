@@ -4,7 +4,7 @@ import Stripe from "stripe"
 import { headers } from "next/headers"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
+  apiVersion: "2025-12-15.clover",
 })
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -71,7 +71,12 @@ export async function POST(req: NextRequest) {
       })
 
       // Create entitlements for each asset
-      const entitlements = assets.map((asset) => ({
+      const entitlements: Array<{
+        userId: string
+        jobId: string
+        orderId: string
+        assetId: string | null
+      }> = assets.map((asset) => ({
         userId,
         jobId,
         orderId,
@@ -104,9 +109,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Disable body parsing for webhook
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}

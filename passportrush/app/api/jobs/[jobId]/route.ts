@@ -4,10 +4,10 @@ import { getSignedDownloadUrl } from "@/lib/storage"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
-    const { jobId } = params
+    const { jobId } = await params
 
     const job = await prisma.job.findUnique({
       where: { id: jobId },

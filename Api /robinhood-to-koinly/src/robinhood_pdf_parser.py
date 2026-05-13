@@ -2,7 +2,7 @@ import os
 import re
 from datetime import datetime
 import pandas as pd
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 
 class RobinhoodPDFParser:
     def __init__(self, statements_dir):

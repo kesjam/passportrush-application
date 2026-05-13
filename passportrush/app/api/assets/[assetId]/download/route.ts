@@ -6,7 +6,7 @@ import { getSignedDownloadUrl, DOWNLOAD_TTL } from "@/lib/storage"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { assetId: string } }
+  { params }: { params: Promise<{ assetId: string }> }
 ) {
   try {
     // Require authentication
@@ -18,7 +18,7 @@ export async function GET(
       )
     }
 
-    const { assetId } = params
+    const { assetId } = await params
 
     // Get asset
     const asset = await prisma.processedAsset.findUnique({

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -16,7 +16,7 @@ export async function GET(
       )
     }
 
-    const { jobId } = params
+    const { jobId } = await params
 
     // Check entitlement
     const entitlement = await prisma.entitlement.findFirst({
